@@ -3,6 +3,7 @@ import {
   MapPin, ChevronDown, ChevronRight, Plus, Download, Filter,
   MoreVertical, Layers, Box, AlertCircle, Check, X,
 } from "lucide-react";
+import { useToast } from "../../hooks/useToast";
 import { Badge, Button, Card, PageHeader, StatCard } from "../../components/ui";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -94,9 +95,9 @@ function binStatusTone(s: BinStatus): "green" | "red" | "zinc" | "amber" {
 }
 
 function capacityColor(pct: number) {
-  if (pct >= 95) return "bg-red-500";
-  if (pct >= 80) return "bg-amber-400";
-  return "bg-indigo-500";
+  if (pct >= 95) return "bg-rose-500";
+  if (pct >= 80) return "bg-amber-500";
+  return "bg-primary-500";
 }
 
 // ─── Add Bin Modal ─────────────────────────────────────────────────────────────
@@ -112,33 +113,33 @@ function AddBinModal({ onSave, onClose }: { onSave: (bin: Bin) => void; onClose:
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white rounded-xl p-6 w-[420px] shadow-xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in" onClick={onClose}>
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 w-[420px] shadow-modal animate-slide-up" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
-          <h2 className="font-semibold text-lg">Add New Bin</h2>
-          <button onClick={onClose}><X size={18} className="text-zinc-400" /></button>
+          <h2 className="font-semibold text-lg text-zinc-900 dark:text-white">Add New Bin</h2>
+          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-600 transition-colors"><X size={18} /></button>
         </div>
         <div className="space-y-4">
           <div>
-            <label className="text-xs font-medium text-zinc-500">Bin Code *</label>
-            <input value={code} onChange={(e) => setCode(e.target.value)} className="w-full mt-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="e.g., A2-05-01" />
+            <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Bin Code *</label>
+            <input value={code} onChange={(e) => setCode(e.target.value)} className="w-full mt-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2.5 text-sm bg-white dark:bg-zinc-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary-400 transition-all" placeholder="e.g., A2-05-01" />
           </div>
           <div>
-            <label className="text-xs font-medium text-zinc-500">Storage Type</label>
-            <select value={type} onChange={(e) => setType(e.target.value as StorageType)} className="w-full mt-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+            <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Storage Type</label>
+            <select value={type} onChange={(e) => setType(e.target.value as StorageType)} className="w-full mt-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2.5 text-sm bg-white dark:bg-zinc-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary-400 transition-all">
               {(["Pallet", "Small Bin", "Bulk", "Cold", "Rack"] as StorageType[]).map((t) => (
                 <option key={t} value={t}>{t}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className="text-xs font-medium text-zinc-500">Max Capacity (units)</label>
-            <input type="number" value={capacity} onChange={(e) => setCapacity(Number(e.target.value))} min={1} className="w-full mt-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+            <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Max Capacity (units)</label>
+            <input type="number" value={capacity} onChange={(e) => setCapacity(Number(e.target.value))} min={1} className="w-full mt-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2.5 text-sm bg-white dark:bg-zinc-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary-400 transition-all" />
           </div>
         </div>
         <div className="flex gap-2 mt-6">
           <Button variant="secondary" className="flex-1 justify-center" onClick={onClose}>Cancel</Button>
-          <button onClick={submit} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">
+          <button onClick={submit} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2.5 text-sm font-medium bg-primary-600 text-white hover:bg-primary-700 shadow-primary-sm hover:shadow-primary-md transition-all duration-150 active:scale-[0.98]">
             <Check size={14} /> Add Bin
           </button>
         </div>
@@ -157,6 +158,7 @@ export default function LocationsBins() {
   const [showAddBin, setShowAddBin] = useState(false);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 5;
+  const { addToast } = useToast();
 
   const selectedZone = useMemo(() => {
     for (const f of floors) {
@@ -197,6 +199,7 @@ export default function LocationsBins() {
         z.id === selectedZoneId ? { ...z, bins: [...z.bins, bin], binCount: z.binCount + 1 } : z
       ),
     })));
+    addToast(`Bin "${bin.code}" added successfully`, "success");
   }
 
   function addZone(floorId: string) {
@@ -206,6 +209,7 @@ export default function LocationsBins() {
     setFloors((prev) => prev.map((f) =>
       f.id === floorId ? { ...f, zones: [...f.zones, { id, name, binCount: 0, bins: [] }] } : f
     ));
+    addToast(`Zone "${name}" created`, "success");
   }
 
   return (
@@ -224,7 +228,7 @@ export default function LocationsBins() {
               {WAREHOUSES.map((w) => <option key={w}>{w}</option>)}
             </select>
             <Button variant="secondary"><Download size={14} /> Export Map</Button>
-            <button className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">
+            <button className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium bg-primary-600 text-white hover:bg-primary-700 shadow-primary-sm hover:shadow-primary-md transition-all duration-150">
               <Plus size={14} /> New Location
             </button>
           </>
@@ -256,23 +260,23 @@ export default function LocationsBins() {
                     {isOpen && (
                       <div className="pl-4">
                         {floor.zones.map((zone) => (
-                          <button
-                            key={zone.id}
-                            onClick={() => { setSelectedZoneId(zone.id); setPage(1); }}
-                            className={`w-full flex items-center justify-between gap-2 pl-5 pr-4 py-2 rounded-lg text-sm transition-colors ${
-                              selectedZoneId === zone.id
-                                ? "bg-indigo-50 text-indigo-700 font-medium"
-                                : "hover:bg-zinc-50 text-zinc-600"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              <Layers size={13} className="shrink-0" />
-                              <span className="truncate">{zone.name}</span>
-                            </div>
-                            <span className={`text-xs font-medium px-1.5 py-0.5 rounded-md ${selectedZoneId === zone.id ? "bg-indigo-100 text-indigo-600" : "bg-zinc-100 text-zinc-500"}`}>
-                              {zone.binCount}
-                            </span>
-                          </button>
+                    <button
+                      key={zone.id}
+                      onClick={() => { setSelectedZoneId(zone.id); setPage(1); }}
+                      className={`w-full flex items-center justify-between gap-2 pl-5 pr-4 py-2 rounded-lg text-sm transition-colors ${
+                        selectedZoneId === zone.id
+                          ? "bg-primary-50 text-primary-700 font-medium dark:bg-primary-950/30 dark:text-primary-400"
+                          : "hover:bg-zinc-50 dark:hover:bg-zinc-800/40 text-zinc-600 dark:text-zinc-400"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Layers size={13} className="shrink-0" />
+                        <span className="truncate">{zone.name}</span>
+                      </div>
+                      <span className={`text-xs font-medium px-1.5 py-0.5 rounded-md ${selectedZoneId === zone.id ? "bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500"}`}>
+                        {zone.binCount}
+                      </span>
+                    </button>
                         ))}
                         <button
                           onClick={() => addZone(floor.id)}
@@ -306,7 +310,7 @@ export default function LocationsBins() {
                     <Button variant="secondary"><Box size={13} /> Bulk Edit Bins</Button>
                     <button
                       onClick={() => setShowAddBin(true)}
-                      className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+                      className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium bg-primary-600 text-white hover:bg-primary-700 shadow-primary-sm hover:shadow-primary-md transition-all duration-150"
                     >
                       <Plus size={14} /> Add Bin
                     </button>
@@ -365,7 +369,7 @@ export default function LocationsBins() {
                       return (
                         <tr key={bin.code} className="border-b border-zinc-50 hover:bg-zinc-50 group">
                           <td className="py-3">
-                            <span className="font-medium text-indigo-600 hover:text-indigo-800 cursor-pointer">{bin.code}</span>
+                            <span className="font-medium text-primary-600 hover:text-primary-700 cursor-pointer transition-colors">{bin.code}</span>
                           </td>
                           <td className="py-3">
                             <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-zinc-100 text-zinc-600">
@@ -381,7 +385,7 @@ export default function LocationsBins() {
                                 />
                               </div>
                               <div className="text-xs text-zinc-500 w-28 shrink-0">
-                                <span className={`font-semibold ${pct >= 95 ? "text-red-500" : pct >= 80 ? "text-amber-500" : "text-indigo-600"}`}>
+                                  <span className={`font-semibold ${pct >= 95 ? "text-rose-500" : pct >= 80 ? "text-amber-500" : "text-primary-600"}`}>
                                   {pct}% Filled
                                 </span>
                                 <span className="text-zinc-400 ml-1">{bin.used}/{bin.capacity} Units</span>

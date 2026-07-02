@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { MapPin, ScanLine, Check } from "lucide-react";
 import { Badge, Button, Card, PageHeader, StatCard } from "../../components/ui";
+import { useToast } from "../../hooks/useToast";
 
 interface Task {
   loc: string;
@@ -26,6 +27,7 @@ export default function PickingPacking() {
   const [checked, setChecked] = useState<boolean[]>([true, false, false, false]);
   const [scan, setScan] = useState("");
   const [lastScan, setLastScan] = useState("SN-8813 Verified");
+  const { addToast } = useToast();
 
   const verifiedCount = tasks.filter((t) => t.status === "Picked").length;
 
@@ -43,6 +45,7 @@ export default function PickingPacking() {
   function submitScan() {
     if (!scan.trim()) return;
     setLastScan(`${scan.trim()} Verified`);
+    addToast(`${scan.trim()} verified successfully`, "success");
     setScan("");
   }
 
@@ -68,7 +71,7 @@ export default function PickingPacking() {
         <StatCard icon={Check} label="Active Pick List" value="PL-2024-8891" tone="zinc" />
         <StatCard icon={Check} label="Route Progress" value={`${Math.round((verifiedCount / tasks.length) * 100)}%`} tone="amber" />
         <StatCard icon={Check} label="Items Verified" value={`${verifiedCount} / ${tasks.length}`} tone="green" />
-        <StatCard icon={Check} label="Package Count" value="02 Units" tone="blue" />
+        <StatCard icon={Check} label="Package Count" value="02 Units" tone="indigo" />
       </div>
       <div className="grid grid-cols-3 gap-5">
         <Card title="Pick List Details" subtitle="Zone B1 - South Warehouse Wings" className="col-span-2" actions={<div className="flex gap-2"><Button variant="secondary">Optimize Route</Button><Button variant="secondary">Pick History</Button></div>}>

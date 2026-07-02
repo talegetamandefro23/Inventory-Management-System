@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus, Truck, Clock, AlertTriangle, TrendingUp, Package } from "lucide-react";
 import { Badge, Button, Card, PageHeader, StatCard } from "../../components/ui";
+import { useToast } from "../../hooks/useToast";
 
 interface Shipment {
   name: string;
@@ -29,6 +30,7 @@ const INITIAL: Record<string, Shipment[]> = {
 
 export default function ReceivingBoard() {
   const [board, setBoard] = useState(INITIAL);
+  const { addToast } = useToast();
 
   function assignClerk(col: string, idx: number) {
     setBoard((prev) => {
@@ -41,9 +43,9 @@ export default function ReceivingBoard() {
 
   return (
     <div>
-      <PageHeader trail={["Warehouse", "Receiving Board"]} title="Receiving Board" subtitle="Orchestrate inbound shipments and clerk assignments." actions={<Button><Plus size={14} />New Inbound Task</Button>} />
+      <PageHeader trail={["Warehouse", "Receiving Board"]} title="Receiving Board" subtitle="Orchestrate inbound shipments and clerk assignments." actions={<Button onClick={() => addToast("New inbound task created", "success")}><Plus size={14} />New Inbound Task</Button>} />
       <div className="grid grid-cols-4 gap-4 mb-5">
-        <StatCard icon={Truck} label="Total Shipments" value="12" tone="blue" />
+        <StatCard icon={Truck} label="Total Shipments" value="12" tone="indigo" />
         <StatCard icon={Clock} label="Expected" value="08" tone="amber" />
         <StatCard icon={AlertTriangle} label="Delayed" value="02" tone="red" />
         <StatCard icon={TrendingUp} label="Throughput" value="85%" tone="green" />
@@ -51,8 +53,8 @@ export default function ReceivingBoard() {
       <div className="grid grid-cols-3 gap-5">
         {Object.entries(board).map(([col, items]) => (
           <div key={col}>
-            <p className="text-xs font-semibold text-zinc-500 mb-3">
-              {col} <span className="text-zinc-300">{items.length}</span>
+            <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 mb-3 uppercase tracking-wider">
+              {col} <span className="text-zinc-300 dark:text-zinc-600">{items.length}</span>
             </p>
             <div className="space-y-3">
               {items.map((it, idx) => (
@@ -78,8 +80,8 @@ export default function ReceivingBoard() {
                         <span className="text-zinc-400">Receiving Progress</span>
                         <span>{it.progress}%</span>
                       </div>
-                      <div className="h-1.5 bg-zinc-100 rounded-full mb-3">
-                        <div className="h-1.5 bg-zinc-800 rounded-full" style={{ width: `${it.progress}%` }} />
+                      <div className="h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full mb-3">
+                        <div className="h-1.5 bg-primary-600 rounded-full transition-all duration-500" style={{ width: `${it.progress}%` }} />
                       </div>
                       <div className="flex items-center gap-2 text-xs">
                         <div className="h-5 w-5 rounded-full bg-zinc-200" />

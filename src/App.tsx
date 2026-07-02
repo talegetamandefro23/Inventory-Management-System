@@ -1,6 +1,8 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AppStoreProvider } from "./context/AppStoreContext";
+import { ToastProvider } from "./hooks/useToast";
+import ToastContainer from "./components/ui/Toast";
 import Layout from "./components/layout/Layout";
 
 // Pages
@@ -30,48 +32,51 @@ import Administration from "./pages/Administration";
 export default function App() {
   return (
     <ThemeProvider>
-      <AppStoreProvider>
-        <Routes>
-          <Route element={<Layout />}>
-            {/* Dashboard */}
-            <Route path="/" element={<Dashboard />} />
+      <ToastProvider>
+        <AppStoreProvider>
+          <Routes>
+            <Route element={<Layout />}>
+              {/* Dashboard */}
+              <Route path="/" element={<Dashboard />} />
 
-            {/* Master Data */}
-            <Route path="/master-data/items" element={<ItemsLibrary />} />
-            <Route path="/master-data/items/:id" element={<ItemDetail />} />
-            <Route path="/master-data/categories" element={<Categories />} />
+              {/* Master Data */}
+              <Route path="/master-data/items" element={<ItemsLibrary />} />
+              <Route path="/master-data/items/:id" element={<ItemDetail />} />
+              <Route path="/master-data/categories" element={<Categories />} />
 
-            {/* Inventory */}
-            <Route path="/inventory/overview" element={<InventoryOverview />} />
-            <Route path="/inventory/stock-in" element={<StockIn />} />
-            <Route path="/inventory/stock-out" element={<StockOut />} />
-            <Route path="/inventory/stock-transfer" element={<StockTransfer />} />
-            <Route path="/inventory/physical-audit" element={<PhysicalAudit />} />
+              {/* Inventory */}
+              <Route path="/inventory/overview" element={<InventoryOverview />} />
+              <Route path="/inventory/stock-in" element={<StockIn />} />
+              <Route path="/inventory/stock-out" element={<StockOut />} />
+              <Route path="/inventory/stock-transfer" element={<StockTransfer />} />
+              <Route path="/inventory/physical-audit" element={<PhysicalAudit />} />
 
-            {/* Warehouse */}
-            <Route path="/warehouse/locations" element={<LocationsBins />} />
-            <Route path="/warehouse/receiving" element={<ReceivingBoard />} />
-            <Route path="/warehouse/putaway" element={<PutawayPlanner />} />
-            <Route path="/warehouse/map" element={<WarehouseMap />} />
-            <Route path="/warehouse/picking" element={<PickingPacking />} />
+              {/* Warehouse */}
+              <Route path="/warehouse/locations" element={<LocationsBins />} />
+              <Route path="/warehouse/receiving" element={<ReceivingBoard />} />
+              <Route path="/warehouse/putaway" element={<PutawayPlanner />} />
+              <Route path="/warehouse/map" element={<WarehouseMap />} />
+              <Route path="/warehouse/picking" element={<PickingPacking />} />
 
-            {/* Procurement */}
-            <Route path="/procurement/requisitions" element={<Requisitions />} />
-            <Route path="/procurement/requisitions/new" element={<NewRequisition />} />
-            <Route path="/procurement/rfq" element={<RfqComparison />} />
-            <Route path="/procurement/orders" element={<PurchaseOrders />} />
+              {/* Procurement */}
+              <Route path="/procurement/requisitions" element={<Requisitions />} />
+              <Route path="/procurement/requisitions/new" element={<NewRequisition />} />
+              <Route path="/procurement/rfq" element={<RfqComparison />} />
+              <Route path="/procurement/orders" element={<PurchaseOrders />} />
 
-            {/* Other modules */}
-            <Route path="/assets" element={<Assets />} />
-            <Route path="/approvals" element={<Approvals />} />
-            <Route path="/reports" element={<Reports />} />
-            <Route path="/administration" element={<Administration />} />
+              {/* Other modules */}
+              <Route path="/assets" element={<Assets />} />
+              <Route path="/approvals" element={<Approvals />} />
+              <Route path="/reports" element={<Reports />} />
+              <Route path="/administration" element={<Administration />} />
 
-            {/* Catch-all */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Route>
-        </Routes>
-      </AppStoreProvider>
+              {/* Catch-all */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Route>
+          </Routes>
+          <ToastContainer />
+        </AppStoreProvider>
+      </ToastProvider>
     </ThemeProvider>
   );
 }

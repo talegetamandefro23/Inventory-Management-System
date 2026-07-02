@@ -37,7 +37,7 @@ export default function Requisitions() {
         }
       />
       <div className="grid grid-cols-4 gap-4 mb-5">
-        <StatCard icon={FileText} label="Total Requisitions" value={requisitions.length} trend="+12% vs last month" trendUp tone="zinc" />
+        <StatCard icon={FileText} label="Total Requisitions" value={requisitions.length} trend="+12% vs last month" trendUp tone="indigo" />
         <StatCard icon={Clock} label="Pending Approval" value={pending} tone="amber" />
         <StatCard icon={AlertTriangle} label="Urgent Requests" value={urgent} tone="red" />
         <StatCard icon={Check} label="Total Value" value={`$${(approvedTotal / 1000).toFixed(1)}k`} trendUp trend="+8.2% vs last month" tone="green" />

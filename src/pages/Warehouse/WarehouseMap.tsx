@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LayoutGrid, Check, AlertTriangle, Clock, Filter } from "lucide-react";
 import { Badge, Button, Card, PageHeader, StatCard } from "../../components/ui";
+import { useToast } from "../../hooks/useToast";
 
 interface Zone {
   name: string;
@@ -34,6 +35,7 @@ const ZONES: Zone[] = [
 export default function WarehouseMap() {
   const [active, setActive] = useState(ZONES[0]);
   const navigate = useNavigate();
+  const { addToast } = useToast();
 
   return (
     <div>
@@ -46,12 +48,12 @@ export default function WarehouseMap() {
             <Button variant="secondary">
               <Filter size={14} /> Filters
             </Button>
-            <Button>Optimize Layout</Button>
+            <Button onClick={() => addToast("Layout optimization analysis started", "info")}>Optimize Layout</Button>
           </>
         }
       />
       <div className="grid grid-cols-4 gap-4 mb-5">
-        <StatCard icon={LayoutGrid} label="+2.4% capacity used" value="76.4%" tone="blue" />
+        <StatCard icon={LayoutGrid} label="+2.4% capacity used" value="76.4%" tone="indigo" />
         <StatCard icon={Check} label="clerks on floor" value="14 / 20" tone="zinc" />
         <StatCard icon={AlertTriangle} label="Zones A, E reaching capacity" value="02 Zones" tone="red" />
         <StatCard icon={Clock} label="pallets at receiving" value="142" tone="amber" />

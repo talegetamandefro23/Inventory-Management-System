@@ -10,7 +10,6 @@ export const NAV: NavItem[] = [
     key: "master-data", label: "Master Data", path: "/master-data/items", icon: "Database",
     children: [
       { key: "items-library", label: "Items Library", path: "/master-data/items" },
-      { key: "item-detail", label: "Item Detail", path: "/master-data/items/:id" },
       { key: "categories", label: "Categories", path: "/master-data/categories" },
     ],
   },
@@ -38,7 +37,6 @@ export const NAV: NavItem[] = [
     key: "procurement", label: "Procurement", path: "/procurement/requisitions", icon: "ShoppingCart",
     children: [
       { key: "requisitions", label: "Purchase Requisitions", path: "/procurement/requisitions" },
-      { key: "new-requisition", label: "New Requisition", path: "/procurement/requisitions/new" },
       { key: "rfq-comparison", label: "RFQ Comparison", path: "/procurement/rfq" },
       { key: "purchase-orders", label: "Purchase Orders", path: "/procurement/orders" },
     ],

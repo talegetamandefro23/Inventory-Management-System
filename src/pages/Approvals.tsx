@@ -2,11 +2,13 @@ import { useState } from "react";
 import { FileText, Check, X } from "lucide-react";
 import { Badge, Button, Card, PageHeader } from "../components/ui";
 import { useAppStore, ApprovalTask } from "../context/AppStoreContext";
+import { useToast } from "../hooks/useToast";
 
 const TYPE_TABS = ["All", "PR", "TR", "ADJ", "AS"];
 
 export default function Approvals() {
   const { tasks, approveTask, rejectTask } = useAppStore();
+  const { addToast } = useToast();
   const [activeType, setActiveType] = useState("All");
   const [selected, setSelected] = useState<ApprovalTask>(tasks[0]);
   const [comment, setComment] = useState("");
@@ -15,6 +17,7 @@ export default function Approvals() {
 
   function handleApprove() {
     approveTask(selected.id);
+    addToast(`${selected.id} approved successfully`, "success");
     setComment("");
     const next = tasks.find((t) => t.status === "Pending" && t.id !== selected.id);
     if (next) setSelected(next);
@@ -22,6 +25,7 @@ export default function Approvals() {
 
   function handleReject() {
     rejectTask(selected.id);
+    addToast(`${selected.id} rejected`, "warning");
     setComment("");
     const next = tasks.find((t) => t.status === "Pending" && t.id !== selected.id);
     if (next) setSelected(next);
@@ -44,7 +48,7 @@ export default function Approvals() {
               <button
                 key={t}
                 onClick={() => setActiveType(t)}
-                className={`px-2.5 py-1 rounded-full text-xs ${activeType === t ? "bg-zinc-900 text-white" : "bg-zinc-100 text-zinc-500"}`}
+                className={`px-2.5 py-1 rounded-full text-xs transition-all duration-150 ${activeType === t ? "bg-primary-600 text-white shadow-primary-sm" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 hover:bg-zinc-200 dark:hover:bg-zinc-700"}`}
               >
                 {t}
               </button>
@@ -59,7 +63,7 @@ export default function Approvals() {
               <button
                 key={t.id}
                 onClick={() => setSelected(t)}
-                className={`w-full text-left rounded-lg border p-3 ${selected?.id === t.id ? "border-zinc-900" : "border-zinc-100"}`}
+                className={`w-full text-left rounded-lg border p-3 transition-all duration-150 ${selected?.id === t.id ? "border-primary-500 bg-primary-50 dark:bg-primary-950/20 dark:border-primary-700" : "border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600"}`}
               >
                 <div className="flex justify-between items-start mb-1">
                   <Badge tone={t.tone}>{t.type}</Badge>

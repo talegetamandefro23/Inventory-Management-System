@@ -51,19 +51,24 @@ export default function StockIn() {
   return (
     <div>
       <PageHeader trail={["Inventory", "Create Stock In (GRN)"]} title="New Goods Receipt Note" subtitle="Receive physical inventory against Purchase Order #PO-2024-00892" />
+
+      {/* Progress Steps */}
       <div className="flex items-center gap-3 mb-6">
         {["Origin & Supplier", "Receive Items", "Discrepancy Review"].map((s, i) => (
           <div key={s} className="flex items-center gap-3 flex-1">
             <div className="flex items-center gap-2">
-              <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold ${i <= 1 ? "bg-zinc-900 text-white" : "border border-zinc-300 text-zinc-400"}`}>
-                {i === 0 ? <Check size={13} /> : i + 1}
+              <div className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all duration-200 ${
+                i <= 1 ? "bg-primary-600 text-white shadow-primary-sm" : "border-2 border-zinc-200 dark:border-zinc-700 text-zinc-400"
+              }`}>
+                {i === 0 ? <Check size={14} /> : i + 1}
               </div>
-              <span className={`text-xs font-medium ${i <= 1 ? "text-zinc-800" : "text-zinc-400"}`}>{s}</span>
+              <span className={`text-xs font-medium ${i <= 1 ? "text-zinc-800 dark:text-zinc-200" : "text-zinc-400"}`}>{s}</span>
             </div>
-            {i < 2 && <div className="flex-1 h-px bg-zinc-200" />}
+            {i < 2 && <div className="flex-1 h-px bg-zinc-200 dark:bg-zinc-700" />}
           </div>
         ))}
       </div>
+
       <div className="grid grid-cols-3 gap-5">
         <Card
           title="Receipt Lines"
@@ -72,63 +77,65 @@ export default function StockIn() {
           actions={
             <div className="flex gap-2">
               <Button variant="secondary">Bulk Scan</Button>
-              <Button variant="secondary">
-                <Plus size={14} /> Add Item
-              </Button>
+              <Button variant="secondary"><Plus size={14} /> Add Item</Button>
             </div>
           }
         >
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs text-zinc-400 border-b border-zinc-100">
-                <th className="py-2 font-medium">Item</th>
-                <th className="py-2 font-medium">Ordered</th>
-                <th className="py-2 font-medium">Received</th>
-                <th className="py-2 font-medium">Rejected</th>
-                <th className="py-2 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {lines.map((r) => (
-                <tr key={r.code} className="border-b border-zinc-50">
-                  <td className="py-3">
-                    <p className="font-medium">{r.desc}</p>
-                    <p className="text-xs text-zinc-400">{r.code}</p>
-                  </td>
-                  <td className="py-3">{r.ordered}</td>
-                  <td className="py-3">
-                    <input
-                      type="number"
-                      className="w-16 border border-zinc-200 rounded px-2 py-1 text-sm"
-                      value={r.received}
-                      onChange={(e) => updateReceived(r.code, Number(e.target.value))}
-                    />
-                  </td>
-                  <td className="py-3">{r.rejected}</td>
-                  <td className="py-3">
-                    <Badge tone={TONE[lineStatus(r)]}>{lineStatus(r)}</Badge>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-[11px] font-semibold text-zinc-500 uppercase tracking-wider border-b border-zinc-100 dark:border-zinc-800">
+                  <th className="py-2.5 font-medium">Item</th>
+                  <th className="py-2.5 font-medium text-right">Ordered</th>
+                  <th className="py-2.5 font-medium text-right">Received</th>
+                  <th className="py-2.5 font-medium text-right">Rejected</th>
+                  <th className="py-2.5 font-medium">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {lines.map((r) => (
+                  <tr key={r.code} className="border-b border-zinc-50 dark:border-zinc-800/50">
+                    <td className="py-3">
+                      <p className="font-medium text-zinc-900 dark:text-white">{r.desc}</p>
+                      <p className="text-xs text-zinc-400">{r.code}</p>
+                    </td>
+                    <td className="py-3 text-right">{r.ordered}</td>
+                    <td className="py-3 text-right">
+                      <input
+                        type="number"
+                        className="w-16 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2 py-1 text-sm text-right bg-white dark:bg-zinc-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary-400 transition-all"
+                        value={r.received}
+                        onChange={(e) => updateReceived(r.code, Number(e.target.value))}
+                      />
+                    </td>
+                    <td className="py-3 text-right text-zinc-400">{r.rejected}</td>
+                    <td className="py-3">
+                      <Badge tone={TONE[lineStatus(r)]} dot>{lineStatus(r)}</Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <p className="text-xs text-zinc-400 mt-3">
-            All changes are auto-saved as draft. &nbsp; Total Items: {lines.length} &nbsp; Total Qty Received: {totalReceived}
+            All changes are auto-saved as draft. Total Items: <span className="font-medium text-zinc-600 dark:text-zinc-300">{lines.length}</span> &middot; Total Qty Received: <span className="font-medium text-zinc-600 dark:text-zinc-300">{totalReceived}</span>
           </p>
+
           <Card title="Documentation & Evidence" subtitle="Upload delivery notes, invoices, or photos of damaged goods." className="mt-4">
             <div className="flex gap-3">
-              <div className="h-16 w-16 rounded-lg border-2 border-dashed border-zinc-200 flex items-center justify-center text-zinc-300">
+              <div className="h-16 w-16 rounded-xl border-2 border-dashed border-zinc-200 dark:border-zinc-700 flex items-center justify-center text-zinc-300 hover:border-primary-400 hover:text-primary-400 transition-colors cursor-pointer">
                 <Plus size={18} />
               </div>
-              <div className="h-16 flex-1 rounded-lg border border-zinc-100 flex items-center gap-2 px-3 text-xs">
-                <FileText size={14} className="text-zinc-400" /> Delivery_Note.pdf
+              <div className="h-16 flex-1 rounded-xl border border-zinc-100 dark:border-zinc-800 flex items-center gap-2 px-3 text-xs hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer">
+                <FileText size={14} className="text-primary-400" /> Delivery_Note.pdf
               </div>
             </div>
           </Card>
         </Card>
+
         <div className="space-y-5">
           <Card title="Discrepancy Review">
-            <div className="bg-amber-50 text-amber-700 text-xs rounded-lg p-3 mb-3">
+            <div className="bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 text-xs rounded-lg p-3 border border-amber-100 dark:border-amber-900/30">
               <p className="font-medium flex items-center gap-1 mb-1">
                 <AlertTriangle size={12} /> Verification Alert
               </p>
@@ -136,22 +143,22 @@ export default function StockIn() {
             </div>
           </Card>
           <Card title="Summary Information">
-            <div className="space-y-2 text-sm">
+            <div className="space-y-3 text-sm">
               <div className="flex justify-between">
-                <span className="text-zinc-500">Target Warehouse</span>
-                <span className="font-medium">WH-NORTH-01</span>
+                <span className="text-zinc-500 dark:text-zinc-400">Target Warehouse</span>
+                <span className="font-medium text-zinc-900 dark:text-white">WH-NORTH-01</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">Associated PO</span>
-                <span className="font-medium">#PO-2024-00892</span>
+                <span className="text-zinc-500 dark:text-zinc-400">Associated PO</span>
+                <span className="font-medium text-zinc-900 dark:text-white">#PO-2024-00892</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">Completion</span>
-                <span className="font-medium">{progress}%</span>
+                <span className="text-zinc-500 dark:text-zinc-400">Completion</span>
+                <span className="font-medium text-zinc-900 dark:text-white">{progress}%</span>
               </div>
             </div>
-            <div className="h-1.5 bg-zinc-100 rounded-full mt-2">
-              <div className="h-1.5 bg-zinc-800 rounded-full" style={{ width: `${progress}%` }} />
+            <div className="h-2 bg-zinc-100 dark:bg-zinc-800 rounded-full mt-3">
+              <div className="h-2 bg-primary-600 rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
             </div>
             <Button className="w-full justify-center mt-4" onClick={proceed}>
               Proceed to Final Review

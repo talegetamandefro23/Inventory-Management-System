@@ -1,4 +1,4 @@
-export type Tone = "zinc" | "green" | "red" | "amber" | "blue";
+export type Tone = "zinc" | "green" | "red" | "amber" | "blue" | "indigo" | "teal";
 
 export type NavChild = {
   key: string;

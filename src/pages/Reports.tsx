@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { BarChart2, Download } from "lucide-react";
 import { Button, Card, PageHeader, StatCard } from "../components/ui";
+import { useToast } from "../hooks/useToast";
 
 const TABS = ["Inventory", "Procurement", "Warehouse", "Assets", "Financial"];
 
@@ -15,6 +16,7 @@ const INV_DATA = [
 
 export default function Reports() {
   const [tab, setTab] = useState("Inventory");
+  const { addToast } = useToast();
   const max = Math.max(...INV_DATA.map((d) => d.value));
 
   return (
@@ -24,13 +26,13 @@ export default function Reports() {
         title="Reports & Analytics"
         subtitle="Operational and financial reporting across inventory, procurement, and assets."
         actions={
-          <Button variant="secondary">
+          <Button variant="secondary" onClick={() => addToast(`${tab} report exported as PDF`, "success")}>
             <Download size={14} /> Export Report
           </Button>
         }
       />
       <div className="grid grid-cols-4 gap-4 mb-5">
-        <StatCard icon={BarChart2} label="Reports Generated (MTD)" value="48" tone="blue" />
+        <StatCard icon={BarChart2} label="Reports Generated (MTD)" value="48" tone="indigo" />
         <StatCard icon={BarChart2} label="Scheduled Reports" value="12" tone="zinc" />
         <StatCard icon={BarChart2} label="Alerts Triggered" value="7" tone="amber" />
         <StatCard icon={BarChart2} label="Data Freshness" value="Live" tone="green" />
@@ -41,7 +43,7 @@ export default function Reports() {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium ${tab === t ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100"}`}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 ${tab === t ? "bg-primary-600 text-white shadow-primary-sm" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"}`}
           >
             {t}
           </button>
@@ -55,7 +57,7 @@ export default function Reports() {
               {INV_DATA.map((d) => (
                 <div key={d.label} className="flex-1 flex flex-col items-center gap-1">
                   <span className="text-[10px] text-zinc-400">{d.value}</span>
-                  <div className="w-full bg-zinc-800 rounded-t" style={{ height: `${(d.value / max) * 100}%` }} />
+                  <div className="w-full bg-primary-600 rounded-t" style={{ height: `${(d.value / max) * 100}%` }} />
                 </div>
               ))}
             </div>

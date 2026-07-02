@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Search, Download, Plus, Briefcase, Check, Wrench, Minus } from "lucide-react";
 import { Badge, Button, Card, PageHeader, StatCard } from "../components/ui";
+import { useToast } from "../hooks/useToast";
 
 interface Asset {
   tag: string;
@@ -36,6 +37,7 @@ export default function Assets() {
   const [selected, setSelected] = useState<Asset>(ASSETS[1]);
   const [query, setQuery] = useState("");
   const [showMaintModal, setShowMaintModal] = useState(false);
+  const { addToast } = useToast();
 
   const filtered = ASSETS.filter(
     (a) =>
@@ -61,7 +63,7 @@ export default function Assets() {
         }
       />
       <div className="grid grid-cols-3 gap-4 mb-5">
-        <StatCard icon={Briefcase} label="Total Assets" value="1,248" trend="+$4.2k valuation" trendUp tone="blue" />
+        <StatCard icon={Briefcase} label="Total Assets" value="1,248" trend="+$4.2k valuation" trendUp tone="indigo" />
         <StatCard icon={Check} label="Active Assignments" value="1,102" tone="green" />
         <StatCard icon={Wrench} label="Upcoming Maintenance" value="24" tone="amber" />
       </div>
@@ -162,8 +164,12 @@ export default function Assets() {
             ))}
 
             <div className="flex gap-2 mt-3">
-              <Button variant="secondary" className="flex-1 justify-center">Transfer</Button>
-              <Button variant="danger" className="flex-1 justify-center">Dispose</Button>
+              <Button variant="secondary" className="flex-1 justify-center" onClick={() => addToast(`Transfer request for "${selected.name}" created`, "info")}>Transfer</Button>
+              <Button variant="danger" className="flex-1 justify-center" onClick={() => {
+                if (window.confirm(`Dispose "${selected.name}"? This will mark it as decommissioned.`)) {
+                  addToast(`"${selected.name}" disposed`, "warning");
+                }
+              }}>Dispose</Button>
             </div>
             <Button className="w-full justify-center mt-2" onClick={() => setShowMaintModal(true)}>
               <Wrench size={13} /> Log Maintenance Task
@@ -174,25 +180,28 @@ export default function Assets() {
 
       {/* Maintenance modal */}
       {showMaintModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setShowMaintModal(false)}>
-          <div className="bg-white rounded-xl p-6 w-96" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in" onClick={() => setShowMaintModal(false)}>
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 w-96 shadow-modal animate-slide-up" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <p className="font-semibold">Log Maintenance Task</p>
-              <button onClick={() => setShowMaintModal(false)}><Minus size={16} /></button>
+              <p className="font-semibold text-zinc-900 dark:text-white">Log Maintenance Task</p>
+              <button onClick={() => setShowMaintModal(false)} className="text-zinc-400 hover:text-zinc-600 transition-colors"><Minus size={16} /></button>
             </div>
-            <label className="text-xs text-zinc-500">Task Type</label>
-            <select className="w-full mt-1 mb-3 rounded-lg border border-zinc-200 px-3 py-2 text-sm">
+            <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Task Type</label>
+            <select className="w-full mt-1.5 mb-3 rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2.5 text-sm bg-white dark:bg-zinc-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary-400 transition-all">
               <option>Preventative Maintenance</option>
               <option>Corrective Repair</option>
               <option>Inspection</option>
             </select>
-            <label className="text-xs text-zinc-500">Description</label>
-            <textarea className="w-full mt-1 mb-3 rounded-lg border border-zinc-200 px-3 py-2 text-sm h-20" placeholder="Describe the maintenance activity..." />
-            <label className="text-xs text-zinc-500">Assigned Technician</label>
-            <input className="w-full mt-1 mb-4 rounded-lg border border-zinc-200 px-3 py-2 text-sm" placeholder="Engineer name..." />
+            <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Description</label>
+            <textarea className="w-full mt-1.5 mb-3 rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2.5 text-sm bg-white dark:bg-zinc-800 dark:text-white h-20 resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary-400 transition-all" placeholder="Describe the maintenance activity..." />
+            <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Assigned Technician</label>
+            <input className="w-full mt-1.5 mb-4 rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2.5 text-sm bg-white dark:bg-zinc-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary-400 transition-all" placeholder="Engineer name..." />
             <div className="flex gap-2">
               <Button variant="secondary" className="flex-1 justify-center" onClick={() => setShowMaintModal(false)}>Cancel</Button>
-              <Button className="flex-1 justify-center" onClick={() => setShowMaintModal(false)}>Save Task</Button>
+              <Button className="flex-1 justify-center" onClick={() => {
+                addToast(`Maintenance task logged for "${selected.name}"`, "success");
+                setShowMaintModal(false);
+              }}>Save Task</Button>
             </div>
           </div>
         </div>

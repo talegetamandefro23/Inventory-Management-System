@@ -1,11 +1,16 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Folder, FolderOpen, ChevronDown, ChevronRight, Search,
   Plus, Download, Edit2, Trash2, Filter, MoreHorizontal, Check, X,
+  Package, Eye, ArrowLeft,
 } from "lucide-react";
-import { Badge, Button, Card, PageHeader } from "../../components/ui";
+import { Badge, Button, Card, PageHeader, EmptyState } from "../../components/ui";
+import { useToast } from "../../hooks/useToast";
+import { useAppStore } from "../../context/AppStoreContext";
+import { statusTone } from "../../data/items";
+import type { Item } from "../../data/items";
 
-// ─── Data model ────────────────────────────────────────────────────────────────
 export interface Category {
   id: string;
   name: string;
@@ -25,9 +30,27 @@ const INITIAL_CATEGORIES: Category[] = [
   { id: "writing-tools", name: "Writing Tools", parentId: "office-supplies", description: "Pens, markers, and correction tools", status: "Active", productCount: 180 },
   { id: "furniture", name: "Furniture", parentId: null, description: "Office and warehouse furniture", status: "Active", productCount: 320 },
   { id: "industrial-equipment", name: "Industrial Equipment", parentId: null, description: "Heavy machinery and industrial tools", status: "Inactive", productCount: 95 },
+  { id: "tools", name: "Tools", parentId: "industrial-equipment", description: "Hand tools and power tools", status: "Active", productCount: 340 },
+  { id: "machinery", name: "Machinery", parentId: "industrial-equipment", description: "Heavy machinery and equipment", status: "Active", productCount: 120 },
+  { id: "ppe", name: "PPE", parentId: null, description: "Personal protective equipment", status: "Active", productCount: 560 },
+  { id: "chemicals", name: "Chemicals", parentId: null, description: "Industrial chemicals and lubricants", status: "Active", productCount: 280 },
+  { id: "hardware", name: "Hardware", parentId: null, description: "Fasteners, casters, and hardware components", status: "Active", productCount: 890 },
+  { id: "components", name: "Components", parentId: null, description: "Electronic and mechanical components", status: "Active", productCount: 1100 },
+  { id: "safety", name: "Safety", parentId: null, description: "Safety equipment and fire protection", status: "Active", productCount: 340 },
 ];
 
-// ─── Tree helpers ───────────────────────────────────────────────────────────────
+// Map category names to their IDs for item matching
+const CATEGORY_NAME_TO_ID: Record<string, string> = {
+  "Machinery": "machinery",
+  "Tools": "tools",
+  "Chemicals": "chemicals",
+  "PPE": "ppe",
+  "Components": "components",
+  "Hardware": "hardware",
+  "Electronics": "electronics",
+  "Safety": "safety",
+};
+
 function useTree(categories: Category[]) {
   const roots = categories.filter((c) => c.parentId === null);
   function children(id: string) {
@@ -38,66 +61,18 @@ function useTree(categories: Category[]) {
     const parent = categories.find((c) => c.id === cat.parentId);
     return parent ? parent.name : "Root";
   }
-  return { roots, children, parentPath };
+  function getAllDescendantIds(catId: string): string[] {
+    const kids = categories.filter((c) => c.parentId === catId);
+    let ids: string[] = [];
+    for (const kid of kids) {
+      ids.push(kid.id);
+      ids = ids.concat(getAllDescendantIds(kid.id));
+    }
+    return ids;
+  }
+  return { roots, children, parentPath, getAllDescendantIds };
 }
 
-// ─── Tree node component ────────────────────────────────────────────────────────
-function TreeNode({
-  cat,
-  depth,
-  selected,
-  onSelect,
-  children,
-}: {
-  cat: Category;
-  depth: number;
-  selected: string;
-  onSelect: (id: string) => void;
-  children: Category[];
-}) {
-  const [open, setOpen] = useState(depth === 0);
-  const hasChildren = children.length > 0;
-  const isSelected = selected === cat.id;
-
-  return (
-    <div>
-      <button
-        onClick={() => { onSelect(cat.id); if (hasChildren) setOpen((o) => !o); }}
-        className={`w-full flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-left transition-colors ${
-          isSelected ? "bg-indigo-50 text-indigo-700 font-medium" : "hover:bg-zinc-50 text-zinc-700"
-        }`}
-        style={{ paddingLeft: `${12 + depth * 20}px` }}
-      >
-        {hasChildren ? (
-          open ? <ChevronDown size={13} className="shrink-0 text-zinc-400" /> : <ChevronRight size={13} className="shrink-0 text-zinc-400" />
-        ) : (
-          <span className="w-3.5 shrink-0" />
-        )}
-        {open && hasChildren
-          ? <FolderOpen size={14} className="shrink-0 text-indigo-400" />
-          : <Folder size={14} className="shrink-0 text-zinc-400" />}
-        <span className="truncate">{cat.name}</span>
-      </button>
-      {open && hasChildren && (
-        <div>
-          {children.map((child) => (
-            <TreeNodeWrapper key={child.id} cat={child} depth={depth + 1} selected={selected} onSelect={onSelect} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Wrapper to resolve children lazily from context
-function TreeNodeWrapper({
-  cat, depth, selected, onSelect,
-}: { cat: Category; depth: number; selected: string; onSelect: (id: string) => void }) {
-  // children passed via closure from parent — re-implemented inline for simplicity
-  return null; // replaced below with inline usage
-}
-
-// ─── Modal ──────────────────────────────────────────────────────────────────────
 function CategoryModal({
   mode,
   existing,
@@ -123,35 +98,61 @@ function CategoryModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white rounded-xl p-6 w-[480px] shadow-xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in" onClick={onClose}>
+      <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 w-[480px] shadow-modal animate-slide-up" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
-          <h2 className="font-semibold text-lg">{mode === "add" ? "Add New Category" : "Edit Category"}</h2>
-          <button onClick={onClose}><X size={18} className="text-zinc-400" /></button>
+          <h2 className="font-semibold text-lg text-zinc-900 dark:text-white">
+            {mode === "add" ? "Add New Category" : "Edit Category"}
+          </h2>
+          <button onClick={onClose} className="text-zinc-400 hover:text-zinc-600 transition-colors">
+            <X size={18} />
+          </button>
         </div>
         <div className="space-y-4">
           <div>
-            <label className="text-xs font-medium text-zinc-500">Category Name *</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} className="w-full mt-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="e.g., Power Tools" />
+            <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Category Name *</label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full mt-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2.5 text-sm bg-white dark:bg-zinc-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary-400 transition-all"
+              placeholder="e.g., Power Tools"
+            />
           </div>
           <div>
-            <label className="text-xs font-medium text-zinc-500">Description</label>
-            <textarea value={desc} onChange={(e) => setDesc(e.target.value)} className="w-full mt-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 h-20 resize-none" placeholder="Describe the category…" />
+            <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Description</label>
+            <textarea
+              value={desc}
+              onChange={(e) => setDesc(e.target.value)}
+              className="w-full mt-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2.5 text-sm bg-white dark:bg-zinc-800 dark:text-white h-20 resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary-400 transition-all"
+              placeholder="Describe the category..."
+            />
           </div>
           <div>
-            <label className="text-xs font-medium text-zinc-500">Parent Category</label>
-            <select value={parentId ?? ""} onChange={(e) => setParentId(e.target.value || null)} className="w-full mt-1 rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
-              <option value="">— Root (no parent)</option>
+            <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Parent Category</label>
+            <select
+              value={parentId ?? ""}
+              onChange={(e) => setParentId(e.target.value || null)}
+              className="w-full mt-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 px-3 py-2.5 text-sm bg-white dark:bg-zinc-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary-400 transition-all"
+            >
+              <option value="">Root (no parent)</option>
               {categories.filter((c) => c.id !== existing?.id).map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className="text-xs font-medium text-zinc-500">Status</label>
-            <div className="flex gap-2 mt-1">
+            <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Status</label>
+            <div className="flex gap-2 mt-1.5">
               {(["Active", "Inactive"] as const).map((s) => (
-                <button key={s} onClick={() => setStatus(s)} className={`flex-1 py-2 rounded-lg text-sm font-medium border ${status === s ? "bg-indigo-600 text-white border-indigo-600" : "border-zinc-200 text-zinc-600"}`}>
+                <button
+                  key={s}
+                  onClick={() => setStatus(s)}
+                  className={`flex-1 py-2.5 rounded-lg text-sm font-medium border transition-all duration-150 ${
+                    status === s
+                      ? "bg-primary-600 text-white border-primary-600 shadow-primary-sm"
+                      : "border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                  }`}
+                >
                   {s}
                 </button>
               ))}
@@ -160,7 +161,10 @@ function CategoryModal({
         </div>
         <div className="flex gap-2 mt-6">
           <Button variant="secondary" className="flex-1 justify-center" onClick={onClose}>Cancel</Button>
-          <button onClick={submit} className="flex-1 justify-center inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">
+          <button
+            onClick={submit}
+            className="flex-1 justify-center inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2.5 text-sm font-medium bg-primary-600 text-white hover:bg-primary-700 shadow-primary-sm hover:shadow-primary-md transition-all duration-150 active:scale-[0.98]"
+          >
             <Check size={14} /> {mode === "add" ? "Add Category" : "Save Changes"}
           </button>
         </div>
@@ -169,15 +173,169 @@ function CategoryModal({
   );
 }
 
-// ─── Main Page ─────────────────────────────────────────────────────────────────
+function TreeNodeItem({
+  cat, depth, hasKids, isSelected, onSelect, kidNodes,
+}: {
+  cat: Category; depth: number; hasKids: boolean; isSelected: boolean;
+  onSelect: (id: string) => void; kidNodes: React.ReactNode[];
+}) {
+  const [open, setOpen] = useState(depth === 0);
+  return (
+    <div>
+      <button
+        onClick={() => { onSelect(cat.id); if (hasKids) setOpen((o) => !o); }}
+        className={`w-full flex items-center gap-1.5 py-2 rounded-lg text-sm text-left transition-all duration-150 ${
+          isSelected
+            ? "bg-primary-50 text-primary-700 font-medium dark:bg-primary-950/30 dark:text-primary-400"
+            : "hover:bg-zinc-50 dark:hover:bg-zinc-800/40 text-zinc-700 dark:text-zinc-300"
+        }`}
+        style={{ paddingLeft: `${12 + depth * 20}px`, paddingRight: "12px" }}
+      >
+        {hasKids ? (
+          open ? <ChevronDown size={13} className="shrink-0 text-zinc-400" /> : <ChevronRight size={13} className="shrink-0 text-zinc-400" />
+        ) : (
+          <span className="w-3.5 shrink-0" />
+        )}
+        {open && hasKids
+          ? <FolderOpen size={14} className="shrink-0 text-primary-500" />
+          : <Folder size={14} className={`shrink-0 ${isSelected ? "text-primary-400" : "text-zinc-400"}`} />}
+        <span className="truncate">{cat.name}</span>
+      </button>
+      {open && hasKids && <div>{kidNodes}</div>}
+    </div>
+  );
+}
+
+// ─── Items View (shown when clicking View All on sub-category) ──────────────
+function CategoryItemsView({
+  categoryId,
+  categoryName,
+  items,
+  onBack,
+}: {
+  categoryId: string;
+  categoryName: string;
+  items: Item[];
+  onBack: () => void;
+}) {
+  const navigate = useNavigate();
+  const [query, setQuery] = useState("");
+
+  const filtered = items.filter(
+    (it) =>
+      it.name.toLowerCase().includes(query.toLowerCase()) ||
+      it.code.toLowerCase().includes(query.toLowerCase()) ||
+      it.brand.toLowerCase().includes(query.toLowerCase())
+  );
+
+  return (
+    <div className="animate-fade-in">
+      <div className="flex items-center gap-3 mb-4">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1.5 text-sm text-zinc-500 hover:text-primary-600 transition-colors"
+        >
+          <ArrowLeft size={14} /> Back to Categories
+        </button>
+      </div>
+
+      <Card>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="font-semibold text-zinc-900 dark:text-white">
+              Items in "{categoryName}"
+            </h3>
+            <p className="text-xs text-zinc-400 mt-0.5">
+              {filtered.length} item{filtered.length !== 1 ? "s" : ""} found
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+              <Search size={13} className="text-zinc-400" />
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="outline-none text-sm w-48 dark:text-white placeholder:text-zinc-300 dark:placeholder:text-zinc-600"
+                placeholder="Search items..."
+              />
+            </div>
+          </div>
+        </div>
+
+        {filtered.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-[11px] font-semibold text-zinc-500 uppercase tracking-wider border-b border-zinc-100 dark:border-zinc-800">
+                  <th className="py-2.5 font-medium">Item Code</th>
+                  <th className="py-2.5 font-medium">Name</th>
+                  <th className="py-2.5 font-medium">Brand</th>
+                  <th className="py-2.5 font-medium text-right">On Hand</th>
+                  <th className="py-2.5 font-medium text-right">Unit Cost</th>
+                  <th className="py-2.5 font-medium">Status</th>
+                  <th className="py-2.5 font-medium text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((item) => (
+                  <tr
+                    key={item.code}
+                    className="border-b border-zinc-50 dark:border-zinc-800/50 hover:bg-primary-50/30 dark:hover:bg-primary-950/10 cursor-pointer transition-colors"
+                    onClick={() => navigate(`/master-data/items/${item.code}`)}
+                  >
+                    <td className="py-3">
+                      <span className="font-mono text-xs text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded">{item.code}</span>
+                    </td>
+                    <td className="py-3">
+                      <span className="font-medium text-zinc-900 dark:text-white">{item.name}</span>
+                    </td>
+                    <td className="py-3 text-zinc-500 dark:text-zinc-400">{item.brand}</td>
+                    <td className="py-3 text-right">
+                      <span className={`font-semibold ${item.onHand === 0 ? "text-rose-500" : item.onHand < 15 ? "text-amber-600" : "text-zinc-900 dark:text-white"}`}>
+                        {item.onHand}
+                      </span>
+                    </td>
+                    <td className="py-3 text-right text-zinc-600 dark:text-zinc-400">${item.unitCost.toFixed(2)}</td>
+                    <td className="py-3">
+                      <Badge tone={statusTone(item.status)} dot>{item.status}</Badge>
+                    </td>
+                    <td className="py-3 text-right">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); navigate(`/master-data/items/${item.code}`); }}
+                        className="text-primary-500 hover:text-primary-700 transition-colors text-xs font-medium"
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <EmptyState
+            icon={Package}
+            title="No items in this category"
+            description="Items assigned to this category will appear here."
+          />
+        )}
+      </Card>
+    </div>
+  );
+}
+
+// ─── Main Page ─────────────────────────────────────────────────────────────
 export default function Categories() {
+  const { items } = useAppStore();
   const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
   const [selectedId, setSelectedId] = useState("electronics");
   const [modal, setModal] = useState<null | "add" | "edit">(null);
   const [filterQuery, setFilterQuery] = useState("");
   const [treeQuery, setTreeQuery] = useState("");
+  const [viewingItems, setViewingItems] = useState<{ categoryId: string; categoryName: string } | null>(null);
+  const { addToast } = useToast();
 
-  const { roots, children, parentPath } = useTree(categories);
+  const { roots, children, parentPath, getAllDescendantIds } = useTree(categories);
   const selected = categories.find((c) => c.id === selectedId)!;
   const subCategories = categories.filter((c) => c.parentId === selectedId);
 
@@ -186,17 +344,43 @@ export default function Categories() {
     [subCategories, filterQuery]
   );
 
+  // Get items for a category (including all descendants)
+  function getItemsForCategory(categoryId: string): Item[] {
+    const catIds = [categoryId, ...getAllDescendantIds(categoryId)];
+    return items.filter((it) => {
+      const itemCategoryId = CATEGORY_NAME_TO_ID[it.category] || it.categoryId;
+      return catIds.includes(itemCategoryId);
+    });
+  }
+
+  // Get items directly for a category (no descendants)
+  function getDirectItemsForCategory(categoryId: string): Item[] {
+    const itemCategoryId = CATEGORY_NAME_TO_ID[items.find((it) => it.categoryId === categoryId)?.category ?? ""] || categoryId;
+    return items.filter((it) => {
+      const itCatId = CATEGORY_NAME_TO_ID[it.category] || it.categoryId;
+      return itCatId === categoryId;
+    });
+  }
+
+  // Compute live product counts from actual items
+  function getLiveProductCount(categoryId: string): number {
+    return getItemsForCategory(categoryId).length;
+  }
+
   function addCategory(data: Omit<Category, "id" | "productCount">) {
     const id = data.name.toLowerCase().replace(/\s+/g, "-") + "-" + Date.now();
     setCategories((prev) => [...prev, { ...data, id, productCount: 0 }]);
+    addToast(`"${data.name}" category created`, "success");
   }
 
   function editCategory(data: Omit<Category, "id" | "productCount">) {
     setCategories((prev) => prev.map((c) => (c.id === selectedId ? { ...c, ...data } : c)));
+    addToast(`"${data.name}" category updated`, "success");
   }
 
   function deleteCategory(id: string) {
-    if (!window.confirm("Delete this category and all its sub-categories?")) return;
+    const cat = categories.find((c) => c.id === id);
+    if (!window.confirm(`Delete "${cat?.name}" and all its sub-categories?`)) return;
     const toDelete = new Set<string>();
     function collect(cid: string) {
       toDelete.add(cid);
@@ -205,9 +389,13 @@ export default function Categories() {
     collect(id);
     setCategories((prev) => prev.filter((c) => !toDelete.has(c.id)));
     setSelectedId(roots.find((r) => !toDelete.has(r.id))?.id ?? "");
+    addToast(`"${cat?.name}" deleted`, "success");
   }
 
-  // Recursive tree renderer (inline to access categories state)
+  function handleViewAllItems(categoryId: string, categoryName: string) {
+    setViewingItems({ categoryId, categoryName });
+  }
+
   function renderNode(cat: Category, depth: number): React.ReactNode {
     const kids = categories.filter((c) => c.parentId === cat.id);
     const hasKids = kids.length > 0;
@@ -229,6 +417,28 @@ export default function Categories() {
     ? categories.filter((c) => c.name.toLowerCase().includes(treeQuery.toLowerCase()))
     : roots;
 
+  // If viewing items for a sub-category
+  if (viewingItems) {
+    const catItems = getItemsForCategory(viewingItems.categoryId);
+    return (
+      <div>
+        <PageHeader
+          trail={["Master Data", "Categories", viewingItems.categoryName]}
+          title={`${viewingItems.categoryName} — Items`}
+          subtitle={`Viewing all ${catItems.length} items in this category and its sub-categories.`}
+        />
+        <CategoryItemsView
+          categoryId={viewingItems.categoryId}
+          categoryName={viewingItems.categoryName}
+          items={catItems}
+          onBack={() => setViewingItems(null)}
+        />
+      </div>
+    );
+  }
+
+  const selectedLiveCount = getLiveProductCount(selectedId);
+
   return (
     <div>
       <PageHeader
@@ -237,10 +447,10 @@ export default function Categories() {
         subtitle="Organize and structure your product hierarchy for efficient inventory control."
         actions={
           <>
-            <Button variant="secondary"><Download size={14} /> Export Hierarchy</Button>
+            <Button variant="secondary" onClick={() => addToast("Category hierarchy exported as CSV", "success")}><Download size={14} /> Export</Button>
             <button
               onClick={() => setModal("add")}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium bg-primary-600 text-white hover:bg-primary-700 shadow-primary-sm hover:shadow-primary-md transition-all duration-150 active:scale-[0.98]"
             >
               <Plus size={14} /> Add Category
             </button>
@@ -249,155 +459,187 @@ export default function Categories() {
       />
 
       <div className="grid grid-cols-3 gap-5">
-        {/* ── Left: Hierarchy Tree ── */}
+        {/* Left: Hierarchy Tree */}
         <Card className="col-span-1 !p-0 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100">
-            <div className="flex items-center gap-2 text-sm font-semibold text-zinc-700">
-              <FolderOpen size={15} className="text-indigo-500" /> Hierarchy
-            </div>
-            <button><Search size={14} className="text-zinc-400" /></button>
-          </div>
-          <p className="text-xs text-zinc-400 px-4 py-2 border-b border-zinc-50">Browse through your category structure.</p>
-
-          <div className="px-2 py-2 border-b border-zinc-50">
-            <div className="flex items-center gap-2 border border-zinc-200 rounded-lg px-2.5 py-1.5">
-              <Search size={12} className="text-zinc-300" />
-              <input value={treeQuery} onChange={(e) => setTreeQuery(e.target.value)} className="outline-none text-xs w-full text-zinc-600" placeholder="Filter categories..." />
+          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-100 dark:border-zinc-800">
+            <div className="flex items-center gap-2 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+              <FolderOpen size={15} className="text-primary-500" /> Hierarchy
             </div>
           </div>
-
+          <p className="text-xs text-zinc-400 px-4 py-2 border-b border-zinc-50 dark:border-zinc-800/50">
+            Browse through your category structure.
+          </p>
+          <div className="px-3 py-2.5 border-b border-zinc-50 dark:border-zinc-800/50">
+            <div className="flex items-center gap-2 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary-400 transition-all">
+              <Search size={12} className="text-zinc-300 dark:text-zinc-600" />
+              <input
+                value={treeQuery}
+                onChange={(e) => setTreeQuery(e.target.value)}
+                className="outline-none text-xs w-full text-zinc-600 dark:text-zinc-300 placeholder:text-zinc-300 dark:placeholder:text-zinc-600"
+                placeholder="Filter categories..."
+              />
+            </div>
+          </div>
           <div className="py-2 overflow-y-auto max-h-[520px]">
             {visibleRoots.map((cat) => renderNode(cat, 0))}
           </div>
         </Card>
 
-        {/* ── Right: Detail ── */}
+        {/* Right: Detail */}
         <div className="col-span-2 space-y-4">
           {selected ? (
             <>
-              {/* Header card */}
               <Card>
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <h2 className="text-xl font-bold text-zinc-900">{selected.name}</h2>
-                    <span className={`flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${selected.status === "Active" ? "bg-emerald-50 text-emerald-700" : "bg-zinc-100 text-zinc-500"}`}>
-                      <span className={`h-1.5 w-1.5 rounded-full ${selected.status === "Active" ? "bg-emerald-500" : "bg-zinc-400"}`} />
+                    <h2 className="text-xl font-bold text-zinc-900 dark:text-white">{selected.name}</h2>
+                    <Badge tone={selected.status === "Active" ? "green" : "zinc"} dot>
                       {selected.status}
-                    </span>
+                    </Badge>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button variant="secondary" onClick={() => setModal("edit")}><Edit2 size={13} /> Edit</Button>
-                    <button onClick={() => deleteCategory(selected.id)} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-red-600 border border-red-100 hover:bg-red-50 transition-colors">
+                    <button
+                      onClick={() => deleteCategory(selected.id)}
+                      className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-rose-600 border border-rose-200 dark:border-rose-900/30 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors"
+                    >
                       <Trash2 size={13} /> Delete
                     </button>
                   </div>
                 </div>
-                <p className="text-sm text-zinc-500 mb-4">{selected.description}</p>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">{selected.description}</p>
                 <div className="flex items-center gap-8">
                   <div>
-                    <p className="text-[10px] font-semibold uppercase text-zinc-400 tracking-wide">Direct Products</p>
-                    <p className="text-2xl font-bold text-zinc-900 mt-0.5">{selected.productCount.toLocaleString()}</p>
+                    <p className="text-[10px] font-semibold uppercase text-zinc-400 tracking-wide">Total Products</p>
+                    <p className="text-2xl font-bold text-zinc-900 dark:text-white mt-0.5">{selectedLiveCount.toLocaleString()}</p>
                   </div>
-                  <div className="h-10 w-px bg-zinc-100" />
+                  <div className="h-10 w-px bg-zinc-100 dark:bg-zinc-800" />
                   <div>
                     <p className="text-[10px] font-semibold uppercase text-zinc-400 tracking-wide">Sub-Categories</p>
-                    <p className="text-2xl font-bold text-zinc-900 mt-0.5">{subCategories.length}</p>
+                    <p className="text-2xl font-bold text-zinc-900 dark:text-white mt-0.5">{subCategories.length}</p>
                   </div>
-                  <div className="h-10 w-px bg-zinc-100" />
+                  <div className="h-10 w-px bg-zinc-100 dark:bg-zinc-800" />
                   <div>
                     <p className="text-[10px] font-semibold uppercase text-zinc-400 tracking-wide">Parent Path</p>
-                    <p className="text-sm font-semibold text-indigo-600 mt-1">{parentPath(selected)}</p>
+                    <p className="text-sm font-semibold text-primary-600 dark:text-primary-400 mt-1">{parentPath(selected)}</p>
+                  </div>
+                  <div className="h-10 w-px bg-zinc-100 dark:bg-zinc-800" />
+                  <div>
+                    <Button variant="secondary" onClick={() => handleViewAllItems(selectedId, selected.name)}>
+                      <Eye size={13} /> View All Items
+                    </Button>
                   </div>
                 </div>
               </Card>
 
-              {/* Sub-categories table */}
               <Card
                 title={`Sub-categories of ${selected.name}`}
-                subtitle="Manage secondary classifications and their associations."
+                subtitle="Click a sub-category row to drill into it, or View All to see its items."
                 actions={
                   <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-2 border border-zinc-200 rounded-lg px-3 py-1.5">
+                    <div className="flex items-center gap-2 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary-400 transition-all">
                       <Search size={13} className="text-zinc-400" />
                       <input
                         value={filterQuery}
                         onChange={(e) => setFilterQuery(e.target.value)}
-                        className="outline-none text-sm w-36"
+                        className="outline-none text-sm w-36 dark:text-white placeholder:text-zinc-300 dark:placeholder:text-zinc-600"
                         placeholder="Filter list..."
                       />
                     </div>
                     <Button variant="secondary"><Filter size={13} /> Sort</Button>
                     <button
-                      onClick={() => { setModal("add"); }}
-                      className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium bg-indigo-600 text-white hover:bg-indigo-700"
+                      onClick={() => setModal("add")}
+                      className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium bg-primary-600 text-white hover:bg-primary-700 transition-colors"
                     >
-                      <Plus size={12} /> Add Sub-category
+                      <Plus size={12} /> Add Sub
                     </button>
                   </div>
                 }
               >
                 {filteredSubs.length > 0 ? (
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-left text-xs text-zinc-400 border-b border-zinc-100">
-                        <th className="py-2 font-medium">Category Name</th>
-                        <th className="py-2 font-medium">Parent Category</th>
-                        <th className="py-2 font-medium">Status</th>
-                        <th className="py-2 font-medium">Product Count</th>
-                        <th className="py-2 font-medium">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredSubs.map((sub) => (
-                        <tr
-                          key={sub.id}
-                          className="border-b border-zinc-50 hover:bg-zinc-50 cursor-pointer"
-                          onClick={() => setSelectedId(sub.id)}
-                        >
-                          <td className="py-3">
-                            <div className="flex items-center gap-2">
-                              <Folder size={14} className="text-zinc-400 shrink-0" />
-                              <span className="font-medium text-zinc-900">{sub.name}</span>
-                            </div>
-                          </td>
-                          <td className="py-3 text-zinc-500">{selected.name}</td>
-                          <td className="py-3">
-                            <span className={`flex items-center gap-1 w-fit text-xs font-medium px-2 py-0.5 rounded-full ${sub.status === "Active" ? "bg-emerald-50 text-emerald-700" : "bg-zinc-100 text-zinc-500"}`}>
-                              <span className={`h-1.5 w-1.5 rounded-full ${sub.status === "Active" ? "bg-emerald-500" : "bg-zinc-400"}`} />
-                              {sub.status}
-                            </span>
-                          </td>
-                          <td className="py-3 font-semibold">{sub.productCount.toLocaleString()}</td>
-                          <td className="py-3">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); deleteCategory(sub.id); }}
-                              className="text-zinc-300 hover:text-red-500 transition-colors"
-                            >
-                              <MoreHorizontal size={16} />
-                            </button>
-                          </td>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="text-left text-[11px] font-semibold text-zinc-500 uppercase tracking-wider border-b border-zinc-100 dark:border-zinc-800">
+                          <th className="py-2.5 font-medium">Category Name</th>
+                          <th className="py-2.5 font-medium">Parent Category</th>
+                          <th className="py-2.5 font-medium">Status</th>
+                          <th className="py-2.5 font-medium text-right">Products</th>
+                          <th className="py-2.5 font-medium text-right">Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ) : (
-                  <div className="py-12 text-center text-zinc-400">
-                    <Folder size={28} className="mx-auto mb-2 text-zinc-200" />
-                    <p className="text-sm">No sub-categories found.</p>
-                    <button
-                      onClick={() => setModal("add")}
-                      className="mt-3 text-xs text-indigo-600 font-medium"
-                    >
-                      + Add the first sub-category
-                    </button>
+                      </thead>
+                      <tbody>
+                        {filteredSubs.map((sub) => {
+                          const subItemCount = getItemsForCategory(sub.id).length;
+                          return (
+                            <tr
+                              key={sub.id}
+                              className="border-b border-zinc-50 dark:border-zinc-800/50 hover:bg-primary-50/30 dark:hover:bg-primary-950/10 transition-colors group"
+                            >
+                              <td className="py-3">
+                                <div className="flex items-center gap-2">
+                                  <Folder size={14} className="text-zinc-400 shrink-0" />
+                                  <button
+                                    onClick={() => setSelectedId(sub.id)}
+                                    className="font-medium text-zinc-900 dark:text-white hover:text-primary-600 transition-colors text-left"
+                                  >
+                                    {sub.name}
+                                  </button>
+                                </div>
+                              </td>
+                              <td className="py-3 text-zinc-500 dark:text-zinc-400">{selected.name}</td>
+                              <td className="py-3">
+                                <Badge tone={sub.status === "Active" ? "green" : "zinc"} dot>{sub.status}</Badge>
+                              </td>
+                              <td className="py-3 text-right font-semibold text-zinc-900 dark:text-white">
+                                {subItemCount}
+                              </td>
+                              <td className="py-3 text-right">
+                                <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <button
+                                    onClick={() => handleViewAllItems(sub.id, sub.name)}
+                                    className="text-xs text-primary-600 hover:text-primary-700 font-medium px-2 py-1 rounded hover:bg-primary-50 dark:hover:bg-primary-950/20 transition-colors"
+                                    title="View all items in this category"
+                                  >
+                                    View All
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setSelectedId(sub.id); }}
+                                    className="text-xs text-zinc-400 hover:text-zinc-600 px-2 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                    title="Edit category"
+                                  >
+                                    <Edit2 size={12} />
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); deleteCategory(sub.id); }}
+                                    className="text-xs text-zinc-400 hover:text-rose-500 px-2 py-1 rounded hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                    title="Delete category"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
+                ) : (
+                  <EmptyState
+                    icon={Folder}
+                    title="No sub-categories found"
+                    description="Add your first sub-category to start organizing items."
+                    actionLabel="Add Sub-category"
+                    onAction={() => setModal("add")}
+                  />
                 )}
               </Card>
             </>
           ) : (
             <Card className="flex flex-col items-center justify-center py-20 text-center">
-              <Folder size={32} className="text-zinc-200 mb-3" />
-              <p className="font-medium text-zinc-500">Select a category from the hierarchy</p>
+              <Folder size={32} className="text-zinc-200 dark:text-zinc-700 mb-3" />
+              <p className="font-medium text-zinc-500 dark:text-zinc-400">Select a category from the hierarchy</p>
             </Card>
           )}
         </div>
@@ -412,38 +654,6 @@ export default function Categories() {
           onClose={() => setModal(null)}
         />
       )}
-    </div>
-  );
-}
-
-// Inline stateful tree node (avoids prop-drilling issues)
-function TreeNodeItem({
-  cat, depth, hasKids, isSelected, onSelect, kidNodes,
-}: {
-  cat: Category; depth: number; hasKids: boolean; isSelected: boolean;
-  onSelect: (id: string) => void; kidNodes: React.ReactNode[];
-}) {
-  const [open, setOpen] = useState(depth === 0);
-  return (
-    <div>
-      <button
-        onClick={() => { onSelect(cat.id); if (hasKids) setOpen((o) => !o); }}
-        className={`w-full flex items-center gap-1.5 py-2 rounded-lg text-sm text-left transition-colors ${
-          isSelected ? "bg-indigo-50 text-indigo-700 font-medium" : "hover:bg-zinc-50 text-zinc-700"
-        }`}
-        style={{ paddingLeft: `${12 + depth * 20}px`, paddingRight: "12px" }}
-      >
-        {hasKids ? (
-          open ? <ChevronDown size={13} className="shrink-0 text-zinc-400" /> : <ChevronRight size={13} className="shrink-0 text-zinc-400" />
-        ) : (
-          <span className="w-3.5 shrink-0" />
-        )}
-        {open && hasKids
-          ? <FolderOpen size={14} className="shrink-0 text-indigo-500" />
-          : <Folder size={14} className={`shrink-0 ${isSelected ? "text-indigo-400" : "text-zinc-400"}`} />}
-        <span className="truncate">{cat.name}</span>
-      </button>
-      {open && hasKids && <div>{kidNodes}</div>}
     </div>
   );
 }

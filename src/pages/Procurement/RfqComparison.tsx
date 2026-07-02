@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Download, Plus } from "lucide-react";
 import { Badge, Button, Card, PageHeader, StatCard } from "../../components/ui";
+import { useToast } from "../../hooks/useToast";
 
 const SUPPLIERS = [
   { name: "Global Industrial Supplies Co.", stars: 4, price: 12450, terms: "Net 30", lead: 14, inco: "DDP", quality: 92, match: 95 },
@@ -11,6 +12,7 @@ const SUPPLIERS = [
 
 export default function RfqComparison() {
   const navigate = useNavigate();
+  const { addToast } = useToast();
   const [weights, setWeights] = useState({ price: 60, delivery: 30, quality: 10 });
   const [selected, setSelected] = useState<number | null>(null);
 
@@ -53,7 +55,7 @@ export default function RfqComparison() {
         }
       />
       <div className="grid grid-cols-3 gap-4 mb-5">
-        <StatCard icon={Plus} label="Total Bids" value="03 Suppliers" tone="zinc" />
+        <StatCard icon={Plus} label="Total Bids" value="03 Suppliers" tone="indigo" />
         <StatCard icon={Plus} label="Best Bid Price" value={`$${lowestPrice.toLocaleString()}`} trendUp tone="green" />
         <StatCard icon={Plus} label="Shortest Lead Time" value={`${shortestLead} Days`} tone="amber" />
       </div>
@@ -154,10 +156,10 @@ export default function RfqComparison() {
             <button
               key={s.name}
               onClick={() => setSelected(s.idx)}
-              className={`flex items-center justify-between w-full border rounded-lg p-2.5 mb-2 text-xs transition-colors ${selected === s.idx ? "border-zinc-900 bg-zinc-50" : "border-zinc-100"}`}
+              className={`flex items-center justify-between w-full border rounded-lg p-2.5 mb-2 text-xs transition-all duration-150 ${selected === s.idx ? "border-primary-500 bg-primary-50 dark:bg-primary-950/20 dark:border-primary-700" : "border-zinc-200 dark:border-zinc-700 hover:border-zinc-300"}`}
             >
               <div className="flex items-center gap-2">
-                <span className="h-6 w-6 rounded-full bg-zinc-100 flex items-center justify-center font-bold">#{i + 1}</span>
+                <span className={`h-6 w-6 rounded-full flex items-center justify-center font-bold text-xs ${i === 0 ? "bg-primary-600 text-white" : "bg-zinc-100 dark:bg-zinc-800"}`}>#{i + 1}</span>
                 <div className="text-left">
                   <p className="font-medium truncate max-w-[140px]">{s.name}</p>
                   <p className="text-zinc-400">Composite Score: {s.score}/100</p>
@@ -168,12 +170,15 @@ export default function RfqComparison() {
 
           <Button
             className="w-full justify-center mt-3 mb-2"
-            onClick={() => navigate("/procurement/orders")}
+            onClick={() => {
+              addToast(`PO created for ${SUPPLIERS[selected!].name}`, "success");
+              navigate("/procurement/orders");
+            }}
             disabled={selected === null}
           >
             Convert to Purchase Order
           </Button>
-          <Button variant="secondary" className="w-full justify-center">
+          <Button variant="secondary" className="w-full justify-center" onClick={() => addToast("RFQ sent for approval", "info")}>
             Send for Approval
           </Button>
           {selected !== null && (

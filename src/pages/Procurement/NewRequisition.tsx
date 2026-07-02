@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Upload, Plus, Trash2, AlertTriangle, FileText } from "lucide-react";
 import { Badge, Button, Card, PageHeader } from "../../components/ui";
 import { useAppStore } from "../../context/AppStoreContext";
+import { useToast } from "../../hooks/useToast";
 import type { Requisition } from "../../data/requisitions";
 
 interface LineItem {
@@ -19,6 +20,7 @@ const TAX = 0.08;
 export default function NewRequisition() {
   const { addRequisition } = useAppStore();
   const navigate = useNavigate();
+  const { addToast } = useToast();
 
   const [title, setTitle] = useState("");
   const [department, setDepartment] = useState("IT Operations");
@@ -72,6 +74,7 @@ export default function NewRequisition() {
       value: grandTotal,
     };
     addRequisition(pr);
+    addToast("Requisition submitted for approval", "success");
     setSubmitted(true);
     setTimeout(() => navigate("/procurement/requisitions"), 1500);
   }
@@ -261,12 +264,12 @@ export default function NewRequisition() {
             </div>
           )}
 
-          <Card title="Submit Requisition" className="bg-zinc-900 text-white border-zinc-900">
-            <div className="flex justify-between text-sm mb-1 text-zinc-300">
+          <Card title="Submit Requisition" className="bg-gradient-to-br from-primary-900 to-primary-950 text-white border-primary-800">
+            <div className="flex justify-between text-sm mb-1 text-white/60">
               <span>Base Total</span>
               <span>${subTotal.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between text-sm mb-2 text-zinc-300">
+            <div className="flex justify-between text-sm mb-2 text-white/60">
               <span>Est. Tax (8%)</span>
               <span>${taxAmount.toFixed(2)}</span>
             </div>
@@ -274,8 +277,8 @@ export default function NewRequisition() {
               <span>Grand Total</span>
               <span>${grandTotal.toFixed(2)}</span>
             </div>
-            <Button className="w-full justify-center bg-white text-zinc-900 hover:bg-zinc-100" onClick={submit}>
-              Submit for Approval →
+            <Button className="w-full justify-center bg-white text-primary-700 hover:bg-white/90" onClick={submit}>
+              Submit for Approval
             </Button>
             <Button variant="ghost" className="w-full justify-center text-zinc-400 mt-2" onClick={() => navigate("/procurement/requisitions")}>
               Cancel

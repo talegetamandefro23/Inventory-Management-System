@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Settings, Plus, Trash2, Check } from "lucide-react";
 import { Badge, Button, Card, PageHeader, StatCard } from "../components/ui";
+import { useToast } from "../hooks/useToast";
 
 const USERS = [
   { name: "John Doe", email: "j.doe@eagpbtu.com", role: "Admin", status: "Active", lastLogin: "2 hours ago" },
@@ -14,9 +15,11 @@ const TABS = ["Users & Roles", "Warehouses", "Integrations", "Audit Log", "Syste
 export default function Administration() {
   const [tab, setTab] = useState("Users & Roles");
   const [saved, setSaved] = useState(false);
+  const { addToast } = useToast();
 
   function saveSettings() {
     setSaved(true);
+    addToast("Settings saved successfully", "success");
     setTimeout(() => setSaved(false), 2000);
   }
 
@@ -37,8 +40,8 @@ export default function Administration() {
 
       <div className="grid grid-cols-4 gap-4 mb-5">
         <StatCard icon={Settings} label="Active Users" value={USERS.filter((u) => u.status === "Active").length} tone="green" />
-        <StatCard icon={Settings} label="Warehouses" value="8" tone="blue" />
-        <StatCard icon={Settings} label="Integrations" value="4 Active" tone="zinc" />
+        <StatCard icon={Settings} label="Warehouses" value="8" tone="indigo" />
+        <StatCard icon={Settings} label="Integrations" value="4 Active" tone="teal" />
         <StatCard icon={Settings} label="System Version" value="v2.4.0" tone="zinc" />
       </div>
 
@@ -47,7 +50,7 @@ export default function Administration() {
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium ${tab === t ? "bg-zinc-900 text-white" : "text-zinc-500 hover:bg-zinc-100"}`}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 ${tab === t ? "bg-primary-600 text-white shadow-primary-sm" : "text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"}`}
           >
             {t}
           </button>
@@ -154,7 +157,7 @@ export default function Administration() {
                 <span className="text-sm">{label}</span>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input type="checkbox" defaultChecked={def as boolean} className="sr-only peer" />
-                  <div className="w-9 h-5 bg-zinc-200 rounded-full peer peer-checked:bg-zinc-900 peer-checked:after:translate-x-4 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all" />
+                  <div className="w-9 h-5 bg-zinc-200 rounded-full peer peer-checked:bg-primary-600 peer-checked:after:translate-x-4 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all" />
                 </label>
               </div>
             ))}

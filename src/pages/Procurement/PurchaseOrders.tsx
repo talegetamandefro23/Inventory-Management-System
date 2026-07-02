@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Download, Plus, FileText, Truck, Check, Clock, AlertTriangle } from "lucide-react";
 import { Badge, Button, Card, PageHeader, StatCard } from "../../components/ui";
+import { useToast } from "../../hooks/useToast";
 
 interface PO {
   id: string;
@@ -21,6 +22,7 @@ const POS: PO[] = [
 export default function PurchaseOrders() {
   const [expanded, setExpanded] = useState<string | null>("PO-2024-001");
   const [selectedSupplier] = useState(POS[0]);
+  const { addToast } = useToast();
 
   return (
     <div>
@@ -30,18 +32,18 @@ export default function PurchaseOrders() {
         subtitle="Manage external procurement documents and track 3-way matching."
         actions={
           <>
-            <Button variant="secondary">
+            <Button variant="secondary" onClick={() => addToast("Purchase orders exported as CSV", "success")}>
               <Download size={14} /> Export Data
             </Button>
-            <Button>
+            <Button onClick={() => addToast("New purchase order form coming soon", "info")}>
               <Plus size={14} /> Create Purchase Order
             </Button>
           </>
         }
       />
       <div className="grid grid-cols-4 gap-4 mb-5">
-        <StatCard icon={FileText} label="Active Orders" value="24" trend="+8% 12 Pending" trendUp tone="zinc" />
-        <StatCard icon={Truck} label="Pending Delivery" value="1,420 Items" tone="zinc" />
+        <StatCard icon={FileText} label="Active Orders" value="24" trend="+8% 12 Pending" trendUp tone="indigo" />
+        <StatCard icon={Truck} label="Pending Delivery" value="1,420 Items" tone="teal" />
         <StatCard icon={AlertTriangle} label="Match Discrepancy" value="2.4%" tone="red" />
         <StatCard icon={Clock} label="Avg. Lead Time" value="5.2 Days" tone="zinc" />
       </div>

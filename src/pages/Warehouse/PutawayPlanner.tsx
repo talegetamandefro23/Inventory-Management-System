@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus, Package } from "lucide-react";
 import { Badge, Button, Card, PageHeader } from "../../components/ui";
+import { useToast } from "../../hooks/useToast";
 
 interface QueueItem {
   id: string;
@@ -21,9 +22,11 @@ const QUEUE: QueueItem[] = [
 export default function PutawayPlanner() {
   const [active, setActive] = useState(QUEUE[0]);
   const [allocated, setAllocated] = useState<string[]>([]);
+  const { addToast } = useToast();
 
   function confirmAllocation() {
     setAllocated((prev) => [...prev, active.id]);
+    addToast(`"${active.name}" allocated to ${active.suggestion}`, "success");
     const next = QUEUE.find((q) => !allocated.includes(q.id) && q.id !== active.id);
     if (next) setActive(next);
   }
@@ -45,7 +48,7 @@ export default function PutawayPlanner() {
               <button
                 key={q.id}
                 onClick={() => setActive(q)}
-                className={`w-full text-left rounded-lg border p-3 ${active.id === q.id ? "border-zinc-900" : "border-zinc-200"}`}
+                className={`w-full text-left rounded-lg border p-3 transition-all duration-150 ${active.id === q.id ? "border-primary-500 bg-primary-50 dark:bg-primary-950/20 dark:border-primary-700" : "border-zinc-200 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600"}`}
               >
                 <div className="flex justify-between items-start mb-1">
                   <span className="text-xs text-zinc-400">{q.id}</span>
@@ -76,7 +79,7 @@ export default function PutawayPlanner() {
       {QUEUE.length > allocated.length && (
         <div className="grid grid-cols-3 gap-5 mt-5">
           <div className="col-span-2">
-            <Card title="Allocation Detail" actions={<Badge tone="blue">AI Recommended</Badge>}>
+            <Card title="Allocation Detail" actions={<Badge tone="indigo">AI Recommended</Badge>}>
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-10 w-10 rounded-lg bg-zinc-100 flex items-center justify-center">
                   <Package size={16} />
@@ -88,9 +91,9 @@ export default function PutawayPlanner() {
               </div>
               <p className="text-xs font-semibold text-zinc-400 mb-2">SMART SUGGESTIONS</p>
               {suggestions.map((s, i) => (
-                <div key={s.loc} className={`flex items-center justify-between rounded-lg border p-3 mb-2 ${i === 0 ? "border-zinc-900 bg-zinc-50" : "border-zinc-200"}`}>
+                <div key={s.loc} className={`flex items-center justify-between rounded-lg border p-3 mb-2 transition-all duration-150 ${i === 0 ? "border-primary-500 bg-primary-50 dark:bg-primary-950/20 dark:border-primary-700" : "border-zinc-200 dark:border-zinc-700"}`}>
                   <div className="flex items-center gap-3">
-                    <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? "bg-zinc-900 text-white" : "bg-zinc-100"}`}>{s.loc.slice(0, 2)}</div>
+                    <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? "bg-primary-600 text-white" : "bg-zinc-100 dark:bg-zinc-800"}`}>{s.loc.slice(0, 2)}</div>
                     <div>
                       <p className="font-medium text-sm">{s.loc}</p>
                       <p className="text-xs text-zinc-400">{s.desc}</p>
